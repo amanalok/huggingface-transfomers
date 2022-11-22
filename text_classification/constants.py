@@ -1,0 +1,1 @@
+BASELINE_MODEL_PATH = 'model_artifact/baseline_model.sav'
