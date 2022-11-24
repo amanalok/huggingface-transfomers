@@ -3,10 +3,12 @@ import torch
 from sklearn.linear_model import LogisticRegression
 import pickle
 import argparse
+from transformers import Trainer
 
 from constants import BASELINE_MODEL_PATH
 from utils import get_embedding_visualization, get_emotions_dataset, tokenize_emotions_dataset, get_pre_trained_model, \
-                  get_numerical_representations, get_tokenizer, plot_confusion_matrix
+                  get_numerical_representations, get_tokenizer, plot_confusion_matrix, \
+                  get_pretrained_model_with_classification_head
 
 
 def get_args():
@@ -27,12 +29,12 @@ def main(train_baseline_model):
     random_dataset_x = np.random.rand(random_dataset_size, 768)
     random_dataset_y = np.random.randint(6, size=(random_dataset_size, 1)) '''
 
-    if not train_baseline_model and get_baseline_model(filename=BASELINE_MODEL_PATH):
-        raise Exception("Sorry, could not find a model to load. Run the script with the flag '-tbm")
+    if not train_baseline_model and not get_baseline_model(filename=BASELINE_MODEL_PATH):
+        raise Exception("Sorry, could not find a model to load. Run the script with the flag '-tbm'")
 
     # Step 1: Get dataset
     emotions = get_emotions_dataset(get_info=True)
-    labels = emotions
+    labels = emotions["train"].features["label"].names
 
     # Step 2: Get the tokenizer
     tokenizer = get_tokenizer()
@@ -49,6 +51,7 @@ def main(train_baseline_model):
     # Step 4: Convert tokenized data to PyTorch format
     emotions_encoded.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
     print(emotions_encoded)
+    sample_val_dataset = emotions_encoded['validation'][:2]
     
     # Step 5: Get hidden state numerical representations of the Emotions Dataset
     # Note: We get hidden state of the CLS token for each tweet. This acts as the aggregate representation of the sequence
@@ -84,9 +87,17 @@ def main(train_baseline_model):
     y_preds = lr_clf.predict(X_valid)
     plot_confusion_matrix(y_preds, y_valid, labels)
 
+    # Step 9: Fetch pre-trianed model with classification head
+    pre_trained_model_for_classification = get_pretrained_model_with_classification_head(device=device)
+    trainer = Trainer(model=pre_trained_model_for_classification)
+
+
 
 if __name__ == '__main__':
     args = get_args()
     print(args.train_baseline_model)
     main(train_baseline_model=args.train_baseline_model)
+    random_dataset_y = np.random.randint(6, size=10)
+    print(random_dataset_y)
+    print(random_dataset_y.argmax(-1))
     

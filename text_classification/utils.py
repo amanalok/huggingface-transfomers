@@ -9,13 +9,31 @@ from transformers import AutoTokenizer
 from transformers import AutoModel
 import torch
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from transformers import AutoModelForSequenceClassification, Trainer, TrainingArguments
+from sklearn.metrics import accuracy_score, f1_score
+
+from constants import PRE_TRAINED_MODEL_NAME
+
+
+def compute_metrics(pred):
+    labels = pred.label_ids
+    preds = pred.predictions.argmax(-1)
+    f1 = f1_score(labels, preds, average='weighted')
+    acc = accuracy_score(labels, preds)
+    return {'accuracy': acc, 'f1': f1}
+
+
+def get_pretrained_model_with_classification_head(device):
+    model_ckpt = PRE_TRAINED_MODEL_NAME
+    num_classes = 6
+    model = (AutoModelForSequenceClassification.from_pretrained(model_ckpt, num_labels=num_classes).to(device))
+    return model
 
 
 def plot_confusion_matrix(y_preds, y_true, labels):
-    cm = confusion_matrix(y_true, y_preds, normalize=True)
-    fig, ax = plt.subplots(6, 6)
+    cm = confusion_matrix(y_true, y_preds, normalize='true')
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-    disp.plot(cmap='Blues', values_format='.2f', ax=ax, colorbar=False)
+    disp.plot()
     plt.title('Normalized Confusion Matrix')
     plt.show()
 
@@ -46,7 +64,7 @@ def get_numerical_representations(emotions_encoded_dataset, device, tokenizer, m
 
 
 def get_pre_trained_model(device, sample_tokenized_data, get_info=False):
-    model_ckpt = 'distilbert-base-uncased'
+    model_ckpt = PRE_TRAINED_MODEL_NAME
     model = AutoModel.from_pretrained(model_ckpt).to(device)
 
     if get_info:
